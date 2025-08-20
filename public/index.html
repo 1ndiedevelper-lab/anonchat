@@ -41,42 +41,69 @@
     </div>
   </div>
 
-  <script>
-    let nickname = "";
+<!-- Socket.io client -->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  let nickname = "";
 
-    function enterChat() {
-      const input = document.getElementById("nickname-input");
-      if (input.value.trim() !== "") {
-        nickname = input.value.trim();
+  function enterChat() {
+    const input = document.getElementById("nickname-input");
+    if (input.value.trim() !== "") {
+      nickname = input.value.trim();
 
-        // Ukrycie logowania i pokazanie czatu
-        document.getElementById("nickname-screen").style.display = "none";
-        document.getElementById("chat-screen").style.display = "flex";
+      // Ukrycie logowania i pokazanie czatu
+      document.getElementById("nickname-screen").style.display = "none";
+      document.getElementById("chat-screen").style.display = "flex";
 
-        // Dodanie nicku do listy użytkowników
-        const userList = document.getElementById("user-list");
-        const userItem = document.createElement("li");
-        userItem.textContent = `${nickname} (Ty)`;
-        userList.appendChild(userItem);
-      }
+      // Wyślij nick do serwera
+      socket.emit('join', nickname);
     }
+  }
 
+  function sendMessage(event) {
+    event.preventDefault();
+    const input = document.getElementById("message-input");
+    const message = input.value.trim();
+    if (message !== "") {
+      // Emituj wiadomość do serwera
+      socket.emit('chat message', { user: nickname, text: message });
 
-    function sendMessage(event) {
-      event.preventDefault();
-      const input = document.getElementById("message-input");
-      const message = input.value.trim();
-      if (message !== "") {
-        const msgList = document.getElementById("messages");
-        const newMsg = document.createElement("li");
-        newMsg.classList.add("self");
-        newMsg.innerHTML = `<strong>${nickname}:</strong> ${message}`;
-        msgList.appendChild(newMsg);
-        input.value = "";
-        msgList.scrollTop = msgList.scrollHeight;
-      }
+      // Dodaj wiadomość lokalnie
+      const msgList = document.getElementById("messages");
+      const newMsg = document.createElement("li");
+      newMsg.classList.add("self");
+      newMsg.innerHTML = `<strong>${nickname}:</strong> ${message}`;
+      msgList.appendChild(newMsg);
+      input.value = "";
+      msgList.scrollTop = msgList.scrollHeight;
     }
-  </script>
+  }
+
+  // Odbieranie wiadomości od innych
+  socket.on('chat message', (msg) => {
+    if (msg.user !== nickname) {
+      const msgList = document.getElementById("messages");
+      const newMsg = document.createElement("li");
+      newMsg.classList.add("other");
+      newMsg.innerHTML = `<strong>${msg.user}:</strong> ${msg.text}`;
+      msgList.appendChild(newMsg);
+      msgList.scrollTop = msgList.scrollHeight;
+    }
+  });
+
+  // Aktualizacja listy użytkowników
+  socket.on('user list', (users) => {
+    const userList = document.getElementById("user-list");
+    userList.innerHTML = "";
+    users.forEach(user => {
+      const userItem = document.createElement("li");
+      userItem.textContent = user === nickname ? `${user} (Ty)` : user;
+      userList.appendChild(userItem);
+    });
+  });
+</script>
+
 
 </body>
 </html>
